@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>West Hollywood Homeless Concern Line — Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #f4f6f9; color: #1a1a2e; font-size: 14px; }
+  .header { background: #003087; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .header-title { color: #fff; font-size: 18px; font-weight: 700; }
+  .header-sub { color: rgba(255,255,255,0.72); font-size: 12px; margin-top: 2px; }
+  .header-right { flex-shrink: 0; text-align: right; }
+  .header-period { color: rgba(255,255,255,0.6); font-size: 11px; }
+  .header-fy { color: #fff; font-size: 12px; font-weight: 700; }
+  .content { padding: 22px 28px 8px; }
+  .page-context { background: #f0f4ff; border-left: 4px solid #003087; border-radius: 0 6px 6px 0; padding: 10px 16px; margin-bottom: 18px; font-size: 12px; color: #3a4a6b; line-height: 1.6; }
+  .kpi-row { display: grid; gap: 12px; margin-bottom: 18px; }
+  .kpi-4 { grid-template-columns: repeat(4, 1fr); }
+  .kpi { background: #fff; border-radius: 8px; padding: 16px 18px; border-top: 3px solid #003087; box-shadow: 0 1px 4px rgba(0,0,135,0.06); }
+  .kpi-label { font-size: 10px; color: #6b7a99; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: #003087; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: #9aa5be; margin-top: 5px; }
+  .kpi-sm .kpi-value { font-size: 22px; }
+  .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 18px; }
+  .chart-card { background: #fff; border-radius: 8px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,135,0.06); overflow: hidden; }
+  .chart-card.full { grid-column: span 2; }
+  .chart-title { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }
+  .chart-note { font-size: 11px; color: #9aa5be; margin-bottom: 12px; }
+  canvas { display: block; max-width: 100%; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .bar-label { font-size: 11px; color: #4a5568; width: 172px; flex-shrink: 0; text-align: right; line-height: 1.3; }
+  .bar-track { flex: 1; background: #eef1f8; border-radius: 4px; height: 22px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: #fff; font-weight: 700; min-width: 36px; }
+  .flow { display: flex; align-items: stretch; gap: 0; margin-bottom: 18px; }
+  .flow-step { flex: 1; background: #f8faff; border: 1px solid #dce3ef; border-radius: 8px; padding: 14px 16px; position: relative; }
+  .flow-step + .flow-step { margin-left: 28px; }
+  .flow-step::before { content:''; position:absolute; left:-20px; top:50%; transform:translateY(-50%); width:0; height:0; border-top:10px solid transparent; border-bottom:10px solid transparent; border-left:12px solid #003087; }
+  .flow-step:first-child::before { display:none; }
+  .flow-num { width:26px; height:26px; background:#003087; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; margin-bottom:8px; }
+  .flow-title { font-size:12px; font-weight:700; color:#003087; margin-bottom:4px; }
+  .flow-desc { font-size:11px; color:#6b7a99; line-height:1.4; }
+  .responder-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+  .responder-card { background:#fff; border-radius:8px; padding:18px 20px; box-shadow:0 1px 4px rgba(0,0,135,0.06); border-left:5px solid #003087; }
+  .responder-card.secondary { border-left-color:#5B9BD5; }
+  .responder-name { font-size:14px; font-weight:700; color:#003087; margin-bottom:6px; }
+  .responder-card.secondary .responder-name { color:#1a7abf; }
+  .responder-hours { font-size:12px; font-weight:700; color:#1a1a2e; margin-bottom:8px; }
+  .responder-focus { font-size:11px; color:#6b7a99; line-height:1.5; }
+  .responder-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-bottom:8px; }
+  .badge-primary { background:#003087; color:#fff; }
+  .badge-backup { background:#eef1f8; color:#6b7a99; }
+  .takeaway-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:18px; }
+  .takeaway { background:#fff; border-radius:8px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,135,0.06); display:flex; gap:12px; align-items:flex-start; }
+  .takeaway-icon { width:32px; height:32px; border-radius:50%; background:#003087; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .takeaway-text { font-size:12px; color:#3a4a6b; line-height:1.5; }
+  .takeaway-text strong { color:#003087; display:block; margin-bottom:2px; font-size:12px; }
+  .footnote { font-size:10px; color:#9aa5be; margin-top:10px; line-height:1.5; font-style:italic; }
+  .dash-footer { margin-top:12px; padding:14px 0 4px; border-top:1px solid #dce3ef; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#9aa5be; }
+  .section-head { margin-bottom:12px; }
+  @media (max-width:900px) {
+    .kpi-4 { grid-template-columns:repeat(2,1fr); }
+    .chart-grid,.responder-grid,.takeaway-grid { grid-template-columns:1fr; }
+    .chart-card.full { grid-column:span 1; }
+    .flow { flex-direction:column; gap:12px; }
+    .flow-step { margin-left:0 !important; }
+    .flow-step::before { display:none; }
+    .header { flex-direction:column; align-items:flex-start; gap:10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">West Hollywood Homeless Concern Line</div>
+    <div class="header-sub">Program Overview &amp; Performance Dashboard &nbsp;&nbsp;|&nbsp;&nbsp; 323-848-6590</div>
+  </div>
+  <div class="header-right">
+    <div class="header-period">Reporting period</div>
+    <div class="header-fy">July 2025 – March 2026</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="page-context">
+    The Homeless Concern Line (HCL) is West Hollywood's centralized, non-emergency intake and dispatch system for homelessness-related service requests. It connects community members, City staff, and partners with the right care-first response team — 24 hours a day, 7 days a week.
+  </div>
+
+  <div class="kpi-row kpi-4">
+    <div class="kpi">
+      <div class="kpi-label">Total requests</div>
+      <div class="kpi-value">993</div>
+      <div class="kpi-sub">July 2025 – March 2026</div>
+    </div>
+    <div class="kpi kpi-sm">
+      <div class="kpi-label">Daily average</div>
+      <div class="kpi-value">~4</div>
+      <div class="kpi-sub">Across the full period; recent months averaging 6–7/day</div>
+    </div>
+    <div class="kpi kpi-sm">
+      <div class="kpi-label">Median response time</div>
+      <div class="kpi-value">10 min</div>
+      <div class="kpi-sub">Dispatch to arrival on scene</div>
+    </div>
+    <div class="kpi kpi-sm">
+      <div class="kpi-label">Within 15 minutes</div>
+      <div class="kpi-value">73%</div>
+      <div class="kpi-sub">Of all field engagements</div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:18px;">
+    <div class="chart-title">How the Homeless Concern Line works</div>
+    <div class="chart-note">Every request follows a four-step care pathway from intake to outcome</div>
+    <div class="flow" style="margin-top:14px;">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-title">Request received</div>
+        <div class="flow-desc">Community members, City staff, Safety Ambassadors, or individuals experiencing homelessness contact the line.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-title">Triage &amp; dispatch</div>
+        <div class="flow-desc">Requests are reviewed and routed to the right outreach team based on presenting need and time of day.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-title">Field response</div>
+        <div class="flow-desc">Outreach teams engage the individual, assess needs, and provide services, referrals, or care coordination on-scene.</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-title">Outcome documented</div>
+        <div class="flow-desc">Each interaction is logged — services accepted, referrals made, and cases where individuals could not be located.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <div class="chart-title">Who responds</div>
+    <div class="chart-note">Two outreach teams operate 24/7 with defined lead roles by time of day</div>
+  </div>
+  <div class="responder-grid">
+    <div class="responder-card">
+      <span class="responder-badge badge-primary">Day lead — 7 AM to 7 PM</span>
+      <div class="responder-name">Healthcare in Action (HIA)</div>
+      <div class="responder-hours">Backup support available overnight</div>
+      <div class="responder-focus">Focus: Medical care, behavioral health, and ongoing client engagement for individuals with complex health and housing needs.</div>
+    </div>
+    <div class="responder-card secondary">
+      <span class="responder-badge badge-backup">Night lead — 7 PM to 7 AM</span>
+      <div class="responder-name">WeHo Care Team (Sycamores)</div>
+      <div class="responder-hours">Backup support available during daytime</div>
+      <div class="responder-focus">Focus: Behavioral health response, de-escalation, and social service linkage for overnight and weekend needs.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Daily request rate — by month</div>
+      <div class="chart-note">Requests per day, allowing fair comparison across full and partial months</div>
+      <canvas id="c-monthly" height="220"></canvas>
+      <p class="footnote">Daily rates shown to allow fair comparison. July (Jul 15–31, 17 days) and March (Mar 1–15, 15 days) are partial months. Raw monthly totals: Jul 34, Aug 68, Sep 80, Oct 67, Nov 107, Dec 136, Jan 192, Feb 213, Mar 96.</p>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Why people reach out</div>
+      <div class="chart-note">Over 84% of requests are care-oriented — housing, health, or wellness</div>
+      <div id="bars-reasons" style="margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Outcomes</div>
+      <div class="chart-note">Result of each outreach response. Of those successfully reached, 63% accepted services.</div>
+      <canvas id="c-outcomes" height="260"></canvas>
+      <p class="footnote">"Unable to locate" is a common and expected outcome in street-based outreach. Individuals may move between locations frequently or have left the area before a team arrives. All attempts are documented and teams follow up when the individual is reported again.</p>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">When calls come in — by time of day</div>
+      <div class="chart-note">Nearly all HCL activity occurs between 6 AM and 6 PM</div>
+      <canvas id="c-time" height="165"></canvas>
+      <div class="chart-title" style="margin-top:18px; margin-bottom:3px;">Calls by day of the week</div>
+      <div class="chart-note">Fridays are the busiest day; weekends see fewer requests</div>
+      <canvas id="c-dow" height="148"></canvas>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <div class="chart-title">Key takeaways</div>
+  </div>
+  <div class="takeaway-grid">
+    <div class="takeaway">
+      <div class="takeaway-icon">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 2L10 7H15L11 10L12.5 15L8 12L3.5 15L5 10L1 7H6L8 2Z" fill="#fff"/></svg>
+      </div>
+      <div class="takeaway-text">
+        <strong>West Hollywood's care-first coordination hub</strong>
+        The HCL is the single point of contact for all non-emergency homelessness-related service requests, coordinating 993 responses across nine months.
+      </div>
+    </div>
+    <div class="takeaway">
+      <div class="takeaway-icon">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M2 13L6 5L9 10L11 7L14 13H2Z" fill="#fff"/></svg>
+      </div>
+      <div class="takeaway-text">
+        <strong>Demand grew steadily and significantly</strong>
+        The daily request rate rose from 2.2 requests/day in August 2025 to 7.6/day in February 2026 — a 3.5× increase — as community awareness and use of the line grew throughout the year.
+      </div>
+    </div>
+    <div class="takeaway">
+      <div class="takeaway-icon">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#fff" stroke-width="2"/><path d="M5 8L7 10L11 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="takeaway-text">
+        <strong>Service-oriented, not enforcement-driven</strong>
+        Over 84% of requests involve housing, health, or welfare concerns. The system is built to connect people with care — not enforcement.
+      </div>
+    </div>
+    <div class="takeaway">
+      <div class="takeaway-icon">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="10" width="2" height="4" fill="#fff"/><rect x="7" y="6" width="2" height="8" fill="#fff" opacity="0.7"/><rect x="12" y="2" width="2" height="12" fill="#fff" opacity="0.4"/></svg>
+      </div>
+      <div class="takeaway-text">
+        <strong>Fast response, persistent engagement</strong>
+        73% of teams arrived within 15 minutes. Of those successfully reached, <strong>63% accepted services</strong>. Outreach continues for individuals who declined or could not be located.
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-footer">
+    <span>West Hollywood Homeless Concern Line &nbsp;·&nbsp; Human Services Division &nbsp;·&nbsp; City of West Hollywood</span>
+    <span>Source: HCL program records &nbsp;·&nbsp; July 2025 – March 2026 &nbsp;·&nbsp; n=993</span>
+  </div>
+
+</div>
+
+<script>
+function setupCanvas(canvas) {
+  const parent = canvas.parentElement;
+  const style = window.getComputedStyle(parent);
+  const padL = parseFloat(style.paddingLeft)||0;
+  const padR = parseFloat(style.paddingRight)||0;
+  const W = Math.max(parent.clientWidth - padL - padR, 200);
+  const H = parseInt(canvas.getAttribute('height'))||220;
+  canvas.width=W; canvas.height=H;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  return { ctx: canvas.getContext('2d'), W, H };
+}
+
+const B1='#003087', B2='#5B9BD5', B3='#8FBBDB', B4='#B8D4EA';
+
+// All data sourced from HCL program records Jul 2025–Mar 2026 (n=993)
+const DATA = {
+  monthly: {
+    labels: ['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+    values: [2.0, 2.2, 2.7, 2.2, 3.6, 4.4, 6.2, 7.6, 6.4],
+    isRate: true
+  },
+  reasons: [
+    { label:'Housing / resource / outreach', val:513, pct:'52%', color:B1 },
+    { label:'Medical / health / mental health', val:168, pct:'17%', color:B1 },
+    { label:'Welfare / wellness check',         val:149, pct:'15%', color:B2 },
+    { label:'Administrative',                   val:66,  pct:'7%',  color:B3 },
+    { label:'Disturbance / safety concern',     val:52,  pct:'5%',  color:B3 },
+    { label:'Other',                            val:45,  pct:'5%',  color:B4 },
+  ],
+  outcomes: {
+    labels: ['Accepted services','Declined services','Unable to locate','Outcome pending / unknown'],
+    values: [381, 228, 185, 199],
+    colors: [B1, B3, B2, B4]
+  },
+  time: {
+    labels: ['6–9 AM','9 AM–12','12–3 PM','3–6 PM','6 PM+'],
+    values: [214, 256, 282, 208, 19]
+  },
+  dow: {
+    labels: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    values: [114, 146, 148, 136, 156, 179, 114]
+  }
+};
+
+function buildBars(id, items) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const maxVal = Math.max(...items.map(i=>i.val));
+  el.innerHTML = items.map(item => {
+    const w = Math.round((item.val/maxVal)*88);
+    return `<div class="bar-row"><span class="bar-label">${item.label}</span><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${item.color||B1};">${item.pct||item.val}</div></div></div>`;
+  }).join('');
+}
+
+function rr(ctx,x,y,w,h,r) {
+  if(h<1){ctx.rect(x,y+h,w,Math.max(1,Math.abs(h)));return;}
+  r=Math.min(r,h/2,w/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h);
+  ctx.lineTo(x,y+h); ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+}
+
+function drawBar(id, labels, values, colors, opts={}) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const {ctx,W,H} = setupCanvas(canvas);
+  const pad={top:10, right:12, bottom:opts.rotateLabels?44:24, left:opts.leftPad||40};
+  const cW=W-pad.left-pad.right, cH=H-pad.top-pad.bottom;
+  const max=opts.axisMax||Math.max(...values,1);
+  const n=labels.length, gW=cW/n, bW=Math.min(gW*0.65,50);
+  ctx.strokeStyle='#eef1f8'; ctx.lineWidth=1;
+  const ticks = opts.isRate ? [0,2,4,6,8] : [0,0.25,0.5,0.75,1].map(t=>Math.round(t*max));
+  const tickVals = opts.isRate ? ticks : [0,0.25,0.5,0.75,1].map(t=>t*max);
+  for(let ti=0;ti<5;ti++){
+    const tv = opts.isRate ? ticks[ti] : ti/4*max;
+    const y=pad.top+cH-(tv/max)*cH;
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cW,y); ctx.stroke();
+    ctx.fillStyle='#9aa5be'; ctx.font='10px Arial'; ctx.textAlign='right';
+    const lbl = opts.isRate ? tv : Math.round(tv);
+    ctx.fillText(lbl, pad.left-4, y+3);
+  }
+  values.forEach((v,i) => {
+    const bh=(v/max)*cH, x=pad.left+i*gW+(gW-bW)/2, y=pad.top+cH-bh;
+    ctx.fillStyle=Array.isArray(colors)?(colors[i]||B1):colors;
+    rr(ctx,x,y,bW,bh,3); ctx.fill();
+    if(bh>16){
+      ctx.fillStyle='#fff'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+      const lbl = opts.isRate ? v.toFixed(1) : v;
+      ctx.fillText(lbl,x+bW/2,y+13);
+    }
+  });
+  ctx.fillStyle='#6b7a99'; ctx.font='10px Arial'; ctx.textAlign='center';
+  labels.forEach((lbl,i) => {
+    const x=pad.left+i*gW+gW/2;
+    if(opts.rotateLabels){
+      ctx.save(); ctx.translate(x,pad.top+cH+6); ctx.rotate(-Math.PI/5);
+      ctx.textAlign='right'; ctx.fillText(lbl,0,0); ctx.restore();
+    } else {
+      ctx.fillText(lbl, x, pad.top+cH+14);
+    }
+  });
+  // Y-axis label for rate charts
+  if(opts.isRate){
+    ctx.save(); ctx.translate(10, pad.top+cH/2);
+    ctx.rotate(-Math.PI/2); ctx.textAlign='center';
+    ctx.fillStyle='#9aa5be'; ctx.font='10px Arial';
+    ctx.fillText('requests/day', 0, 0); ctx.restore();
+  }
+}
+
+function drawDonut(id, labels, values, colors) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const {ctx,W,H} = setupCanvas(canvas);
+  const total=values.reduce((a,b)=>a+b,0);
+  const legRows=Math.ceil(labels.length/2);
+  const legH=legRows*17+12;
+  const cH=H-legH;
+  const cx=W/2, cy=cH/2;
+  const r=Math.min(W,cH)/2-14, ir=r*0.58;
+  let angle=-Math.PI/2;
+  values.forEach((v,i) => {
+    const slice=(v/total)*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,angle,angle+slice);
+    ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,r,angle,angle+slice);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    angle+=slice;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,ir,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+  ctx.fillStyle=B1; ctx.font='bold 20px Arial'; ctx.textAlign='center';
+  ctx.fillText('993',cx,cy-2);
+  ctx.fillStyle='#9aa5be'; ctx.font='10px Arial';
+  ctx.fillText('requests',cx,cy+14);
+  const sY=cH+10;
+  labels.forEach((lbl,i) => {
+    const col=i%2, row=Math.floor(i/2);
+    const lx=col===0?(W/2-130):(W/2+8), ly=sY+row*17;
+    const pct=Math.round(values[i]/total*100);
+    ctx.fillStyle=colors[i]; ctx.fillRect(lx,ly-9,10,10);
+    ctx.fillStyle='#4a5568'; ctx.font='10px Arial'; ctx.textAlign='left';
+    ctx.fillText(`${lbl}  ${pct}%`, lx+13, ly);
+  });
+}
+
+function render() {
+  buildBars('bars-reasons', DATA.reasons);
+  const mMax=Math.max(...DATA.monthly.values);
+  drawBar('c-monthly', DATA.monthly.labels, DATA.monthly.values,
+    DATA.monthly.values.map(v=>v===mMax?B1:v>=5?B2:B3),
+    {axisMax:9, isRate:true});
+  drawDonut('c-outcomes', DATA.outcomes.labels, DATA.outcomes.values, DATA.outcomes.colors);
+  const tMax=Math.max(...DATA.time.values);
+  drawBar('c-time', DATA.time.labels, DATA.time.values,
+    DATA.time.values.map(v=>v===tMax?B1:v>150?B2:B3), {axisMax:320});
+  const dMax=Math.max(...DATA.dow.values);
+  drawBar('c-dow', DATA.dow.labels, DATA.dow.values,
+    DATA.dow.values.map(v=>v===dMax?B1:v>140?B2:B3), {axisMax:220});
+}
+
+function destroyCharts() {
+  ['c-monthly','c-outcomes','c-time','c-dow'].forEach(id=>{
+    const c=document.getElementById(id);
+    if(c){c.getContext('2d').clearRect(0,0,c.width,c.height); c.removeAttribute('style');}
+  });
+}
+
+function init() {
+  render();
+  let t;
+  window.addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(()=>{destroyCharts();render();},150);});
+}
+
+if(document.readyState==='complete') requestAnimationFrame(()=>requestAnimationFrame(init));
+else window.addEventListener('load',()=>requestAnimationFrame(()=>requestAnimationFrame(init)));
+</script>
+</body>
+</html>
